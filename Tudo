@@ -1,0 +1,891 @@
+Controle Projetos
+
+Código.gs
+function OnOpen(){
+  //Cria o menu que liga e desliga o processamento
+  var ui = SpreadsheetApp.getUi();
+  // Or DocumentApp or FormApp.
+  ui.createMenu('MOF')
+  .addItem('Processar linha atual', 'ProcessarLinha2')
+  .addSeparator()
+  .addItem('Buscar novos clientes', 'BuscarNovosProjetos')
+  .addSeparator()
+  .addSeparator()
+  .addSeparator()
+  .addSeparator()
+  .addSeparator()
+  .addSeparator()
+  .addSeparator()
+  .addSeparator()
+  .addSeparator()
+  .addSeparator()
+  .addItem('Processar todos', 'ProcessarTodos')
+  .addToUi();
+  
+ 
+}
+
+function VerificarAquivos(idPasta){
+  var arquivosEncontrados = DriveApp.getFolderById(idPasta).getFiles();
+  var arquivosEncontradosTxt = "";
+  while (arquivosEncontrados.hasNext()) {
+    var file = arquivosEncontrados.next();
+    arquivosEncontradosTxt = arquivosEncontradosTxt +  file.getName() + "\n";
+  }
+  return arquivosEncontradosTxt;
+}
+
+function ProcessarTodos(){
+  
+  for(var lin = 64 ; lin < 900 ; lin++){
+    if(ProcessarLinha(lin) >= 8){
+      break;
+    }
+  }
+}
+function ProcessarLinha2(){
+  var range = SpreadsheetApp.getActiveRange();
+ 
+  if(range.getNumColumns() == 1 && range.getNumRows() == 1){
+    ProcessarLinha(range.getRow());
+  }else{
+   Browser.msgBox('Selecione apenas uma celula para usar esta função.'); 
+  }
+  
+}
+
+function ProcessarLinhasDoIntervalo(){
+  var range = SpreadsheetApp.getActiveRange();
+ 
+  if(range.getNumColumns() == 1 && range.getNumRows() == 1){
+    ProcessarLinha(range.getRow());
+  }else{
+   Browser.msgBox('Selecione apenas uma celula para usar esta função.'); 
+  }
+  
+}
+
+function CriarPasta(id_pasta_raiz,nome_nova_pasta){
+ 
+  var pastaRaiz = DriveApp.getFolderById(id_pasta_raiz);
+  //return pastaRaiz.createFolder(nome_nova_pasta).getId();
+  return pastaRaiz.createFolder(nome_nova_pasta).setDescription(nome_nova_pasta + "-foto\n" + nome_nova_pasta + "-proj\n" + nome_nova_pasta + "-plan").getId();
+  
+}
+
+function BuscarRegiao(cidade,estado){
+ //cidade = "Campinas";
+ //estado = "SP";
+  var retorno = "";
+  var pasta = SpreadsheetApp.getActiveSpreadsheet();
+  var planilha = pasta.setActiveSheet(pasta.getSheetByName("Regioes"));
+  
+  var rangeRegioes = planilha.getRange(2, 1, planilha.getMaxRows(), planilha.getMaxColumns());
+  var arrRegioes = rangeRegioes.getValues();
+  var planilha = pasta.setActiveSheet(pasta.getSheetByName("Principal"));
+  SpreadsheetApp.flush();
+  for(var lin = 1 ; lin < rangeRegioes.getNumRows() ; lin++){
+    var linha = arrRegioes[lin];
+    var itemCidade = linha[0];
+    var itemEstado = linha[1];
+    if(itemCidade.toUpperCase() == cidade.toUpperCase() && itemEstado.toUpperCase() == estado.toUpperCase()){
+      var itemRegiao = linha[2];
+      var itemMesoregiao = linha[3];
+      var itemMicroregiao = linha[4];
+      
+      var retorno = new Array();
+
+      retorno.push([itemCidade,itemEstado,itemRegiao,itemMesoregiao,itemMicroregiao]);
+    }
+  }
+  return retorno;
+}
+
+function ChecaPastaEmPasta(idpastaraiz, nomepasta, retornaId){ 
+ //idpastaraiz = "0B3dQDjIAQ2zKQ0gwSWRGYlZzcTQ";
+ //nomepasta = "SPMBC0131170216";
+  
+  var q = '"' + idpastaraiz + '" in parents and title contains "' + nomepasta + '"';
+  
+  var pastas = DriveApp.searchFolders(q);// searchFiles(q);
+  
+  var encontrou = false;
+  var idPasta  = "";
+  
+  while( pastas.hasNext() ) {
+    var pasta = pastas.next();
+    idPasta = pasta.getId();
+    encontrou = true;
+     
+    break;
+  }
+  if(retornaId){
+    return idPasta;
+  }else{
+    return encontrou;  
+  }
+  
+}
+
+
+
+
+function BuscaArquivosEmPasta(idpastaraiz, nomeArquivo){ 
+  //idpastaraiz = "0B3dQDjIAQ2zKQ0gwSWRGYlZzcTQ";//
+  //idpastaraiz = "0B3dQDjIAQ2zKank5ZHlJQlcwUzA";
+  
+  //nomeArquivo = "-foto";
+  
+  var q = '"' + idpastaraiz + '" in parents and title contains "' + nomeArquivo + '"';
+  
+  var files = DriveApp.searchFiles(q);// searchFiles(q);
+  
+  var encontrou = false;
+   
+  while( files.hasNext() ) {
+    encontrou = true;
+    break;
+  }
+  return encontrou;
+}
+
+function LeTextoEmDoc(idDoc){
+  
+  //idDoc="1NcGTSXuWsVgndRHls23Sn0ZGbHka82rPxqEM_XQDIng" ;
+  //idDoc="19BkV3XrbODSJyCPPFvclW5PMDnKM3iXIDfr0uOuSDG4" ;  
+  
+  var textoDoc = DocumentApp.openById(idDoc);
+  
+  return textoDoc.getBody().getText();
+  
+}
+function BuscaIdArquivo(idPasta,nome){
+ 
+  var q = '"' + idPasta + '" in parents and title contains "' + nome + '"';
+  
+  var files = DriveApp.searchFiles(q);// searchFiles(q);
+  var idArquivo = "";
+  
+  while( files.hasNext() ) {
+    var file = files.next();
+    idArquivo = file.getId();
+    encontrou = true;
+    break;
+  }
+  return idArquivo;
+}
+
+function BuscaArquivo(idPasta,nome){
+ 
+  var q = '"' + idPasta + '" in parents and title contains "' + nome + '"';
+  
+  var files = DriveApp.searchFiles(q);// searchFiles(q);
+  var arquivo = "";
+  
+  while( files.hasNext() ) {
+    var file = files.next();
+    arquivo = file;
+    
+    encontrou = true;
+    break;
+  }
+  return arquivo;
+}
+
+function BuscaListaFases(idPlanilhaDados){
+ idPlanilhaDados = "1OMCxrvlrFrpJXn6frbj93rR1CPjsNWOgfvJ0cvS67rs"
+  var pasta = SpreadsheetApp.openById(idPlanilhaDados);
+  var planilha = pasta.setActiveSheet(pasta.getSheetByName("BD ITENS"))
+  var dadosConfig = planilha.getRange(5, 1, 1, planilha.getMaxColumns()).getValues();
+  var lista = [];
+  
+   for(var col = 10 ; col < planilha.getMaxColumns() ; col++){
+     lista.push(dadosConfig[0][col].toString());
+   }
+  return lista;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function onEditOutOfOrder(e){
+  var planilha = SpreadsheetApp.getActiveSheet();
+  if( planilha.getName() == "Principal"){
+    var range = e.range;
+    var linha = range.getRow();
+    var coluna = range.getColumn();
+    
+    
+    //Se alterou a celula 1 x 1
+    if(linha == 1 && coluna == 1){
+      planilha.getRange(1 , 1).setBackgroundRGB(102,178,255);
+      switch(range.getValue()){
+        case "Processar todos":
+          ProcessarTodos();
+          break;
+        case "Buscar novos projetos":
+          BuscarNovosProjetos();
+          break;
+        case "Verificar Arquivos":
+          VerificarArquivos;
+          break;   
+        case "Aguardando...":
+          break;             
+      }
+      planilha.getRange(1 , 1).setValue("Aguardando...").setBackgroundRGB(255,255,255);
+      
+    //Se alterou a celula 1 da primeira coluna
+    }else if(coluna == 1){
+      switch(range.getValue()){
+        case "Verificar arquivos":
+          //ProcessarTodos();
+          break;
+        case "Cadastrar no processo":
+          //ProcessarTodos();
+          break;          
+      }
+    }else{
+      if(linha > 1){
+        ProcessarLinha(linha);  
+      }
+    }
+  }
+}
+
+MailChimp.gs
+var API_KEY = "142e211acab2ec0dd5c8f7c927ded4fe-us13";//"b3b43693f0ee66b8b2ee16a54c623e05-us12";
+var mc_base_url = "http://us13.api.mailchimp.com/1.3/?method=listSubscribe";
+var mc_list_idNaoSF = "007f3f1a99";//"8d9c18a12b";//Clientes Não Steel Frame
+var mc_list_idSF = "72a580984e";//"058c442201";//Clientes  Steel Frame
+var mc_double_optin = false;
+
+
+/**
+ * Uses the MailChimp API to add a subscriber to a list.
+ */
+function sendToMailChimp(nome,sobrenome,email,SF){
+  //nome = "Defora";
+  //sobrenome = "Iurrul";
+  //email = "email@ddd.eba";
+  //SF = true;
+  var listId = "";
+  if(SF){
+    listId = mc_list_idSF;
+  }else{
+    listId = mc_list_idNaoSF;
+  }
+  
+  var payload = {
+    "method": "listSubscribe",
+    "apikey": API_KEY,
+    "id": listId,
+    "merge_vars[FNAME]":nome,
+    "merge_vars[LNAME]":sobrenome,
+    "email_address": email,
+    "double_optin": listId,
+    "update_existing": false
+  };
+  var options = {
+    "method": "post",
+    "payload": payload
+  };
+  
+  var response = UrlFetchApp.fetch(mc_base_url,options);
+  Logger.log(response)
+}
+
+BuscarNovosProjetos.gs
+function BuscarNovosProjetos(){
+  
+  var planilha = SpreadsheetApp.getActiveSpreadsheet();
+  var planilhaIds = planilha.setActiveSheet(planilha.getSheetByName("Ids"));
+  var dataListaIds = planilhaIds.getDataRange().getValues();  
+  
+  var idPastaNovosProjetos = dataListaIds[0][1].toString();
+  
+ 
+  var pastaNovosProjetos =  SpreadsheetApp.openById(idPastaNovosProjetos);
+  
+  var planilhaPrincipal = planilha.setActiveSheet(planilha.getSheetByName("Principal"));
+  
+  var planilhaNovosProjetos1 = pastaNovosProjetos.setActiveSheet(pastaNovosProjetos.getSheetByName("Novos Projetos"));
+  var valuesListaNovos = planilhaNovosProjetos1.getDataRange().getValues(); 
+  
+  var numrows = planilhaNovosProjetos1.getDataRange().getNumRows();
+  
+ // var fonteFormato = planilhaPrincipal.getRange("M2");
+  
+  //var mRows=planilhaPrincipal.getMaxRows();
+  
+  //fonteFormato.copyFormatToRange(planilhaPrincipal,mRows,13, 3, 1);
+  
+  //Para cada um encontrado
+  for(var lin = 1 ; lin < numrows ; lin++){
+    if(valuesListaNovos[lin][1].toString() != ""){
+      var datahora = new Date(valuesListaNovos[lin][0]);
+      var nome = valuesListaNovos[lin][2].toString();
+      var email = valuesListaNovos[lin][3].toString();
+      var cidade =  valuesListaNovos[lin][4].toString();
+      var estado = valuesListaNovos[lin][5].toString();
+      var telefone = valuesListaNovos[lin][6].toString();
+      var padrao = valuesListaNovos[lin][7].toString();
+      var inicio = valuesListaNovos[lin][8].toString();
+      
+      
+      var novalinha = planilhaPrincipal.appendRow(["NOVO",
+                                   nome,
+                                 email,
+                                 cidade,
+                                 estado,
+                                 "",
+                                 padrao,
+                                 "",
+                                 "Convencional",
+                                 "",
+                                 telefone,
+                                 inicio,
+                                  datahora]);
+      
+      sendToMailChimp(nome,cidade + "-" + estado,email,false);
+      
+      
+     // fonteFormato.copyFormatToRange(planilhaPrincipal.getSheetId(), planilhaPrincipal.getMaxRows(),13, 1, 1);
+      
+      
+    }
+  }
+  //Limpa a planilha de novos
+  var conteudoNovos = planilhaNovosProjetos1.getRange(2, 1, numrows, 9);   
+  conteudoNovos.clear();
+  
+  var planilhaNovosProjetos2 = pastaNovosProjetos.setActiveSheet(pastaNovosProjetos.getSheetByName("Sheet1"));
+  var valuesListaNovos2 = planilhaNovosProjetos2.getDataRange().getValues(); 
+  
+  var numrows = planilhaNovosProjetos2.getDataRange().getNumRows();
+  
+  //Para cada um encontrado
+  for(var lin = 1 ; lin < numrows ; lin++){
+    if(valuesListaNovos2[lin][1].toString() != ""){
+      var datahora = new Date(valuesListaNovos2[lin][1]);//PS - Esta gravando trocando o ip pela data, com relação ao outro form
+      var nome = valuesListaNovos2[lin][2].toString();
+      var email = valuesListaNovos2[lin][3].toString();
+      var cidade =  valuesListaNovos2[lin][4].toString();
+      var estado = valuesListaNovos2[lin][5].toString();
+      var telefone = valuesListaNovos2[lin][6].toString();
+      var padrao = valuesListaNovos2[lin][7].toString();
+      var compara = valuesListaNovos2[lin][8].toString();
+      var proposta = valuesListaNovos2[lin][9].toString();
+      var inicio = valuesListaNovos2[lin][10].toString();
+      
+      if(compara.trim() == ""){compara = "Convencional";}
+      
+      planilhaPrincipal.appendRow(["NOVO",
+                                   nome,
+                                 email,
+                                 cidade,
+                                 estado,
+                                 "",
+                                 padrao,
+                                 "",
+                                 compara,
+                                 proposta,
+                                 telefone,
+                                 inicio,
+                                  datahora]);
+      
+      sendToMailChimp(nome,cidade + "-" + estado,email,true);
+     // fonteFormato.copyFormatToRange(planilhaPrincipal.getSheetId(), planilhaPrincipal.getMaxRows(),13, 1, 1);
+    }
+  }
+  //Limpa a planilha de novos
+  var conteudoNovos2 = planilhaNovosProjetos2.getRange(2, 1, numrows, 11);   
+  conteudoNovos2.clear();
+  
+  
+  //planilhaPrincipal.getRange(2,1,planilhaPrincipal.getMaxRows(),planilhaPrincipal.getMaxColumns()).sort({column: 13, ascending: false});
+  //SpreadsheetApp.flush();
+}
+
+
+ProcessarLinha.gs
+function ProcessarLinha(linha){
+
+  
+  
+  //Now you can log and it will also log to the spreadsheet
+  //Logger.log("That's all you need to do");
+  
+  var comecouEm = new Date();
+  //linha = 9;
+  var scriptProperties = PropertiesService.getScriptProperties();
+  Logger = BetterLog.useSpreadsheet(scriptProperties.getProperty("IDPLANILHALOGS"));
+  var pasta = SpreadsheetApp.getActiveSpreadsheet();
+  //var planilha = SpreadsheetApp.getActiveSheet();
+  
+  var planilha = pasta.setActiveSheet(pasta.getSheetByName("Principal"));
+  
+  var linhaComDados = planilha.getRange(linha, 1, 1, 30).getValues();
+  
+  var codigo = linhaComDados[0][0];
+  
+  var tamcod = codigo.length;
+  
+  if(linhaComDados[0][25] != ""){
+    return 0; 
+  } 
+  
+  
+  
+  var nome = linhaComDados[0][1];
+  var email = linhaComDados[0][2];
+  var cidade = linhaComDados[0][3];
+  var estado = linhaComDados[0][4];
+  var regiao = linhaComDados[0][5];
+  var padrao = linhaComDados[0][6];
+  var estrut = linhaComDados[0][8];
+  var proposta = linhaComDados[0][9];
+  var telefo = linhaComDados[0][10];
+  //var inicio = linhaComDados[0][11];
+  var recebido = new Date(linhaComDados[0][12]);
+  //var recebido = new Date();
+  var stOrc =  linhaComDados[0][13];
+  var classif =  linhaComDados[0][14];
+  var enviEm =  linhaComDados[0][15];
+  var area =  linhaComDados[0][16];
+  var codigo  =  linhaComDados[0][17];
+  
+  var ESTADO = "";
+  var REGIAO = "";
+  var STATUS = "";
+  var TECNOLOGIA = "";
+  var AREA = "";
+  var DATA = "";
+  var CODIGO = "";
+  var erros = "";
+  var numErros = 0;
+  var abrevNome = "";
+  
+  planilha.getRange(linha, 1, 1, 30).setBackgroundRGB(255,255,255);
+  
+  if(nome.trim() != ""){
+    planilha.getRange(linha , 2).setBackgroundRGB(255,255,255);
+     abrevNome  = nome.trim().substring(0,3).toUpperCase(); 
+  }else{
+    planilha.getRange(linha , 2).setBackgroundRGB(255,153,51);
+    erros =  erros + "Nome                " + "\n";
+    numErros++;
+  }  
+  
+  if(email.trim() != ""){
+    planilha.getRange(linha , 3).setBackgroundRGB(255,255,255);
+  }else{
+    planilha.getRange(linha , 3).setBackgroundRGB(255,153,51);
+    erros =  erros + "E-mail              " + "\n";
+    numErros++;
+  }  
+  
+  if(cidade.trim() != ""){
+    planilha.getRange(linha , 4).setBackgroundRGB(255,255,255);
+  }else{
+    planilha.getRange(linha , 4).setBackgroundRGB(255,153,51);
+    erros =  erros + "Cidade              " + "\n";
+    numErros++;
+  }
+  
+  if(estado.trim() != ""){
+    ESTADO = estado.toUpperCase();; 
+    planilha.getRange(linha , 5).setValue(ESTADO).setBackgroundRGB(255,255,255);
+  }else{
+    erros = erros + "Estado              " + "\n";
+    planilha.getRange(linha , 5).setBackgroundRGB(255,153,51);
+    numErros++;
+  }
+  
+  
+  
+  if(regiao.trim() != ""){
+    if( regiao.substring(2,3) == "-" && regiao.substring(4,5) == "-"){
+      REGIAO = regiao.substring(3,4).toUpperCase(); 
+      planilha.getRange(linha , 6).setBackgroundRGB(255,255,255);
+    }else{
+      planilha.getRange(linha , 6).setBackgroundRGB(255,153,51);
+      erros =  erros + "Região              " + "\n";
+      numErros++;
+    }
+  }else{
+    planilha.getRange(linha , 6).setBackgroundRGB(255,153,51);
+    if(cidade.trim() != "" && estado.trim() != ""){
+      var buscarRegiao = BuscarRegiao(cidade,estado);
+      if( buscarRegiao != ""){
+        
+        planilha.getRange(linha , 6).setValue(buscarRegiao[0][3].toString()).setBackgroundRGB(255,255,102);
+         planilha.getRange(linha , 4).setValue(buscarRegiao[0][0].toString());
+      }
+    }
+    
+    erros =  erros + "Região              " + "\n";
+    numErros++;
+  }
+  
+  if(classif.trim() != ""){
+    if(classif.trim() != "Bom" && classif.trim() != "Ruim" && classif.trim() != "Médio" && classif.trim() != "Ótimo"){
+      erros =  erros + "Classificar         " + "\n";
+      planilha.getRange(linha , 15).setBackgroundRGB(255,153,51);  
+      numErros++;
+    }else{
+      STATUS = classif.substring(0,1).toUpperCase();
+      planilha.getRange(linha , 15).setBackgroundRGB(255,255,255);
+    }
+    planilha.getRange(linha , 15).setBackgroundRGB(255,255,255);
+  }else{
+    erros =  erros + "Classificar         " + "\n";
+    planilha.getRange(linha , 15).setBackgroundRGB(255,153,51);
+    numErros++;
+  }  
+  
+  if(estrut.trim() != ""){
+    TECNOLOGIA = estrut.substring(0,1).toUpperCase(); 
+    if(estrut.trim() != "Steel Frame" && estrut.trim() != "Convencional" && estrut.trim() != "Estrutural"){
+      erros =  erros + "Tecnologia          " + "\n";
+      numErros++;
+      planilha.getRange(linha , 9).setBackgroundRGB(255,153,51);      
+    }else{
+      planilha.getRange(linha , 9).setBackgroundRGB(255,255,255);
+    }
+  }else{
+    erros =  erros + "Tecnologia          " + "\n";
+    planilha.getRange(linha , 9).setBackgroundRGB(255,153,51);
+    numErros++;
+  }    
+  
+  if(recebido != ""){
+    var dia = recebido.getDate();
+    var mes =recebido.getMonth() + 1;
+    var ano =recebido.getFullYear();
+    DATA = ("00" + dia).slice(-2) + ("00" + mes).slice(-2)  + ("00" + ano).slice(-2); 
+    planilha.getRange(linha , 13).setBackgroundRGB(255,255,255);
+  }else{
+    erros =  erros + "DT entrada          " + "\n" ;
+    planilha.getRange(linha , 13).setBackgroundRGB(255,153,51);
+    numErros++;
+  }   
+  
+  if(area != ""){
+    AREA = ("0000" + area).slice(-4); 
+    planilha.getRange(linha , 17).setBackgroundRGB(255,255,255);
+  }else{
+    erros =  erros + "Área                " + "\n";
+    planilha.getRange(linha , 17).setBackgroundRGB(255,153,51);
+    numErros++;
+  }   
+  
+  if(erros != ""){
+    planilha.getRange(linha , 1).setValue(numErros + " erros.").setBackgroundRGB(192,192,192).setNote(erros);
+  }else{
+    
+    planilha.getRange(linha, 1, 1, 21).setBackgroundRGB(102, 204, 0); //VERDE
+    
+    var idPastaProjeto = planilha.getRange(linha , 28).getValue();
+    var id_pasta_raiz = scriptProperties.getProperty("IDPASTARAIZPROJETOS");
+    
+    CODIGO = ESTADO + REGIAO + STATUS + TECNOLOGIA + AREA + DATA;
+   
+    if(idPastaProjeto == ""){
+      
+      idPastaProjeto = ChecaPastaEmPasta(id_pasta_raiz,abrevNome + "-" + CODIGO, true);
+      planilha.getRange(linha , 28).setValue(idPastaProjeto) ;
+      planilha.getRange(linha , 1).setNote("https://drive.google.com/drive/u/0/folders/" + idPastaProjeto); 
+      planilha.getRange(linha , 2).setNote(CODIGO + "-foto\n" + CODIGO + "-proj\n" + CODIGO + "-plan");
+    }
+    
+    if(idPastaProjeto == ""){
+      
+      planilha.getRange(linha , 1).setValue(CODIGO);
+      
+      Logger.log("Código criado: " + CODIGO);
+      
+      // var id_pasta_raiz2 = "0B3dQDjIAQ2zKQ0gwSWRGYlZzcTQ";//TODO - Colocar num arquivo
+      idPastaProjeto = CriarPasta(id_pasta_raiz,abrevNome + "-" + CODIGO);
+      planilha.getRange(linha , 28).setValue(idPastaProjeto) ;
+      planilha.getRange(linha , 1).setNote("https://drive.google.com/drive/u/0/folders/" + idPastaProjeto); 
+      //planilha.getRange(linha , 3).setNote(idPastaProjeto) ;
+      
+      planilha.getRange(linha , 2).setNote(CODIGO + "-foto\n" + CODIGO + "-proj\n" + CODIGO + "-plan");
+      Logger.log("Pasta criada: " + CODIGO);
+    }
+    
+    
+    var nomeArquivos = VerificarAquivos(idPastaProjeto);
+    if(nomeArquivos != ""){
+      var temImagem = false;
+      var temProjeto = false;
+      var temPlanilha = false;
+      
+      if(nomeArquivos.indexOf("foto") !=-1){temImagem = true};
+      if(nomeArquivos.indexOf("proj") !=-1){temProjeto = true};
+      if(nomeArquivos.indexOf("plan") !=-1){temPlanilha = true};
+      
+      planilha.getRange(linha , 4).setNote(nomeArquivos);
+      
+      if(temImagem){ 
+        var arquivo = BuscaArquivo(idPastaProjeto,"foto" );
+        arquivo.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);
+        var idImagem = arquivo.getId();
+        planilha.getRange(linha , 23).setValue("IMAGEMOK");	
+        planilha.getRange(linha , 29).setValue(idImagem) ;
+        Logger.log("Imagem encontrada: " + CODIGO + " - " + arquivo.getName());
+        
+      }
+      if(temProjeto){ 
+        var arquivo1 = BuscaArquivo(idPastaProjeto,"proj" );
+        var idArquivoProjeto = arquivo1.getId();
+        arquivo1.setSharing(DriveApp.Access.ANYONE, DriveApp.Permission.VIEW);        
+        planilha.getRange(linha , 24).setValue("PROJETOOK");
+        planilha.getRange(linha , 30).setValue(arquivo1.getId()) ;
+        Logger.log("Projeto encontrado: " + CODIGO + " - " + arquivo1.getName());
+      }
+      if(temPlanilha){ 
+        var arquivo2 = BuscaArquivo(idPastaProjeto,"plan" );
+        var idArquivoDados = arquivo2.getId();
+        planilha.getRange(linha , 25).setValue("PLANILHAOK");
+        planilha.getRange(linha , 31).setValue(arquivo2.getId()) ;
+        Logger.log("Planilha encontrada: " + CODIGO + " - " + arquivo2.getName());
+      }      
+      if(temProjeto && temImagem){
+        planilha.getRange(linha, 1, 1, 21).setBackgroundRGB(0, 153, 0); //rosa 
+      }
+      if(temProjeto && temPlanilha){
+        planilha.getRange(linha, 1, 1, 21).setBackgroundRGB(51, 153, 255);//AZUL
+        
+        if(planilha.getRange(linha , 32).getValue() == ""){//Se não tiver pasta cliente
+          var pastaRaizProjeto = DriveApp.getFolderById(idPastaProjeto);
+          pastaRaizProjeto.setName("[" + pastaRaizProjeto.getName() + "]")
+          var pastaRaizProjetoCliente = pastaRaizProjeto.createFolder("Cliente");
+          planilha.getRange(linha , 32).setValue(pastaRaizProjetoCliente.getId()) ;  
+          var IDTEMPLATEPLANILHAPROJETO = scriptProperties.getProperty("IDTEMPLATEPLANILHAPROJETO");
+          var arquivoTemplateConfig = DriveApp.getFileById(IDTEMPLATEPLANILHAPROJETO);
+          var ArquivoConfigNovo = arquivoTemplateConfig.makeCopy(CODIGO + " - Config",pastaRaizProjeto);  
+          planilha.getRange(linha , 33).setValue(ArquivoConfigNovo.getId()) ;  
+          
+          
+          var newData = [];
+          newData.push(["0","NOME","FASE","PROPOSTA","FORNECEDOR","STATUS","EMAILFORNECEDOR","EMAILCLIENTE","IDPASTAPROPOSTA","URLPASTAPROPOSTA","ULTIMAINTERACAO","NOMECLIENTE","CIDADE","ESTADO","IDIMAGEM","METRAGEM"]);
+          var ssConfig = SpreadsheetApp.open(ArquivoConfigNovo);
+          var sConfig = ssConfig.setActiveSheet(ssConfig.getSheetByName("Principal"));
+          
+          sConfig.getRange(1, 1, newData.length, newData[0].length).setValues(newData);   
+
+          
+          
+          
+          planilha.getRange(linha, 1, 1, 33).setBackgroundRGB(0, 128, 0);
+          SpreadsheetApp.flush();
+          //MOF.P_Novo(IDLISTAPROJETOS,pastaRaizProjeto, pastaRaizProjetoCliente,ArquivoConfigNovo.getId(),idArquivoDados,"https://drive.google.com/open?id=" + idArquivoProjeto,CODIGO,email, cidade, estado,regiao,nome,telefo,classif,area,idImagem) ;
+          
+          //planilha.getRange(linha, 1, 1, 26).setBackgroundRGB(0, 204, 204);//.setFontColor(254,254,254);//Preto e branco
+          
+          planilha.getRange(linha , 26).setValue("PRONTO");
+          //}
+        }
+      }
+    }
+  }
+  //planilha.getRange(2, 1, planilha.getMaxRows(), planilha.getMaxColumns()).sort({column: 13, ascending: true});
+  var temp = (new Date() - comecouEm)/1000;
+  var logui = "Linha:" + linha + " - processada em " + temp + " segundos";
+  Logger.log(logui)
+  
+  SpreadsheetApp.flush();
+  
+  return numErros;
+  
+//  } catch (e) { //with stack tracing if your exceptions bubble up to here
+//   e = (typeof e === 'string') ? new Error(e) : e;
+//    Logger.severe('%s: %s (line %s, file "%s"). Stack: "%s" . While processing %s.',e.name||'', 
+//               e.message||'', e.lineNumber||'', e.fileName||'', e.stack||''); //, processingMessage||''
+//    throw e;
+//  }
+}
+
+Config.gs
+
+
+function CarregarIds(){
+
+  var pastaConfig = SpreadsheetApp.openById("1_63LXWulZFmdcDLH8uE3YRUKn30JdGrlo2ifhGrcCUc");
+  var planilhaConfig = pastaConfig.setActiveSheet(pastaConfig.getSheetByName("V2"))
+  var dadosConfig = planilhaConfig.getDataRange().getValues();
+  
+    var scriptProperties = PropertiesService.getScriptProperties();
+  
+  for(var lin = 0 ; lin <  planilhaConfig.getMaxRows() - 1  ; lin++){
+    //Para cada item no arquivo de config, cria uma propriedade para o script
+    scriptProperties.setProperty(dadosConfig[lin][0].toString(), dadosConfig[lin][1].toString()); 
+  }
+  
+
+}
+
+ListasProjetos V2
+Código.gs
+function Processar() {
+  
+  //Deve equivaler ao período que estamos rodando
+  var tempoEntreProcessamento = 11800;//Minutos
+  
+  //CarregarIds_();
+  var scriptProperties = PropertiesService.getScriptProperties();
+  
+    Logger = BetterLog.useSpreadsheet(scriptProperties.getProperty("IDPLANILHALOGS"));
+  
+  //Verifica se houve na pasta onde estão os projetos
+  var IDPASTARAIZ = scriptProperties.getProperty("IDPASTARAIZ");
+  if(!MOF.ChecaAtividadePasta(IDPASTARAIZ,tempoEntreProcessamento)){
+    Logger.log("Sem atividade nos projetos.");
+   return;
+  }
+    
+  var TMINICIOPROC = new Date();
+  var TEMPOSUFICIENTE = 1000 * 60 * 5;
+  
+  //busca a propriedade que diz a partir de que linha processar 
+  
+  var iniciarNaLinha = scriptProperties.getProperty('INICIARNALINHA');
+  
+  var idPastaRaiz = scriptProperties.getProperty("IDPASTARAIZ");  
+  var idPastaRaizProjetos = scriptProperties.getProperty("IDPASTARAIZPROJETOS");
+  var idPlanilhaControleEmails = scriptProperties.getProperty("IDPLANILHAEMAILS");
+  var idPlanilhaFornecedores = scriptProperties.getProperty("IDPLANILHAFORNECEDORES");
+  var IDHISTORICOFORNECEDORES = scriptProperties.getProperty("IDHISTORICOFORNECEDORES");
+  
+  var ssLista = SpreadsheetApp.getActiveSpreadsheet();
+  //Abre a lista de projetos e procura o primeiro com status de NOVO na tab Principal.
+  var sListaPrincipal = ssLista.setActiveSheet(ssLista.getSheetByName("Principal")) 
+  
+  var dataListaPrincipal = sListaPrincipal.getDataRange().getValues(); 
+  var numrows = sListaPrincipal.getDataRange().getNumRows();
+  
+  var fornecedoresDisponiveis = MOF.CarregarFornecedoresDisponiveis(idPlanilhaFornecedores);
+  
+  var lin = parseInt(iniciarNaLinha);
+  var range = "";
+  var agora = new Date();
+  var diferencaDeTempo = agora - TMINICIOPROC;  
+  while (diferencaDeTempo < TEMPOSUFICIENTE) {
+    
+    var agora3 = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");//toLocaleDateString(),
+    var range3 = sListaPrincipal.getRange(1, 20).setValue(agora3).setBackgroundRGB(255, 255, 255);                        //The best you can do is use the ISO format:  YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS
+    range3 = sListaPrincipal.getRange(1, 21).setValue("RODANDO");
+    SpreadsheetApp.flush();
+    
+    dataListaPrincipal = sListaPrincipal.getDataRange().getValues(); 
+    
+    var linha = dataListaPrincipal[lin];
+    if(linha == null){
+      scriptProperties.setProperty('INICIARNALINHA', 1); 
+      break; 
+    }
+    var nomeProjeto = linha[0].toString();
+    var idPastaProjeto = linha[1].toString();
+    var idPlanConfigProjeto = linha[3].toString();
+    var dataHora = linha[4];//Utilities.formatDate(linha[4], Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+    var statusProjeto = linha[5].toString();
+    var regiaoProjeto = linha[6].toString();
+    var emailCliente = linha[7].toString();
+    var urlArquivoProjeto = linha[24].toString();
+    
+    //Marca que está processando e a hora de início
+    var agora = new Date();//Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+    var range = "";
+    if (statusProjeto != ""){
+      var range = sListaPrincipal.getRange(lin + 1, 5).setValue(agora);
+      range = sListaPrincipal.getRange(lin+ 1, 6).setValue("EMPROCESSO").setBackgroundRGB(255, 190, 9);
+      SpreadsheetApp.flush();
+      
+      var dh = new Date(dataHora);
+      dh.setDate(dh.getTime + (24*60*60*1000));
+      //var atividadeNesteProjeto = MOF.ChecaAtividadePasta(idPastaProjeto, tempoEntreProcessamento);
+      //if(atividadeNesteProjeto){
+        //if(MOF.ChecaSeRegiaoDisponivel(fornecedoresDisponiveis,regiaoProjeto)){
+          if(MOF.P_Projeto(idPlanConfigProjeto, idPlanilhaFornecedores, regiaoProjeto, idPlanilhaControleEmails, emailCliente,fornecedoresDisponiveis,urlArquivoProjeto,IDHISTORICOFORNECEDORES)){
+            fornecedoresDisponiveis = MOF.CarregarFornecedoresDisponiveis(idPlanilhaFornecedores);
+          }
+        //}
+      //}
+      
+      range = sListaPrincipal.getRange(lin+ 1, 6).setValue("EMPROCESSO").setBackgroundRGB(255, 255, 255);
+    }
+    
+    range = sListaPrincipal.getRange(lin+ 1, 20).setValue((new Date() - agora)/1000);
+    SpreadsheetApp.flush();
+    
+    agora = new Date();
+    diferencaDeTempo = agora - TMINICIOPROC;  
+    lin++;
+    scriptProperties.setProperty('INICIARNALINHA', lin); 
+    
+  } 
+    
+  
+  var agora3 = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");//toLocaleDateString(),
+  var range3 = sListaPrincipal.getRange(1, 20).setValue(agora3).setBackgroundRGB(255, 255, 255);
+  range3 = sListaPrincipal.getRange(1, 21).setValue("EnvEmail");
+  var sListaPrincipal = ssLista.setActiveSheet(ssLista.getSheetByName("Principal"));
+  var agora4 = new Date();
+  Logger.log("Final processamento em: " + ((agora - agora4) /1000));
+  SpreadsheetApp.flush();
+  
+  //Manda os emails relativos a este ciclo.
+  MOF.ProcessarEmails(idPlanilhaControleEmails);
+  MOF.ProcessarEmailsClientes(idPlanilhaControleEmails);
+  
+  agora4 = new Date();
+  Logger.log("Final processamento emails: " + ((agora - agora4) /1000));
+  range3 = sListaPrincipal.getRange(1, 21).setValue("PARADO");
+  SpreadsheetApp.flush();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function CarregarIds_(){
+  
+  var pastaConfig = SpreadsheetApp.openById("1_63LXWulZFmdcDLH8uE3YRUKn30JdGrlo2ifhGrcCUc");
+  var planilhaConfig = pastaConfig.setActiveSheet(pastaConfig.getSheetByName("V2"))
+  var dadosConfig = planilhaConfig.getDataRange().getValues();
+  
+  var scriptProperties = PropertiesService.getScriptProperties();
+  
+  for(var lin = 0 ; lin <  planilhaConfig.getMaxRows() - 1  ; lin++){
+    //Para cada item no arquivo de config, cria uma propriedade para o script
+    scriptProperties.setProperty(dadosConfig[lin][0].toString(), dadosConfig[lin][1].toString()); 
+  }
+  
+  
+}
